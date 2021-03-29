@@ -475,6 +475,7 @@ int main(int argc, char* argv[])
       cairo_paint(ctx);
       cairo_surface_flush(sfc);
 
+      free(uptime);
       // sleep
       nanosleep(&ts, NULL);
    }
@@ -483,6 +484,10 @@ int main(int argc, char* argv[])
    cairo_surface_destroy(image_sfc);
    close_x11_win(sfc);
    free(distro);
+   free(kernel);
+   free(cpu);
+   free(wm);
+   free(res);
 
    return 0;
 }
