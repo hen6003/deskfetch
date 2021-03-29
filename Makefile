@@ -1,7 +1,7 @@
 all: deskfetch
 
 deskfetch: main.o
-	gcc main.o -o deskfetch -lX11 -lcairo
+	gcc main.o -o deskfetch -lX11 -lcairo -lXrandr
 
 clean:
 	rm *.o deskfetch

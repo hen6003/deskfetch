@@ -1,6 +1,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/keysym.h>
+#include <X11/extensions/Xrandr.h>
 
 #include <GL/gl.h>
 #include <GL/glx.h>
@@ -202,6 +203,47 @@ char* get_kernel()
    return kernel;
 }
 
+char* get_username()
+{
+   FILE *fp;
+   char *username;
+   char ch;
+
+   username = (char *) malloc(50);
+
+   username = getenv("USER");
+
+   return username;
+}
+
+char* get_hostname()
+{
+   FILE *fp;
+   char *hostname;
+   char ch;
+
+   hostname = (char *) malloc(50);
+
+   fp = fopen("/etc/hostname", "r");
+   
+   if (fp == NULL)
+   {
+      fprintf(stderr, "ERROR: Couldn't get hostname\n");
+      strcpy(hostname, "Unknown");
+   }
+   else
+   {
+      strcpy(hostname, "");
+      
+      while ((ch = fgetc(fp)) != '\n')
+         sprintf(hostname, "%s%c", hostname, ch);
+      
+      fclose(fp);
+   }
+
+   return hostname;
+}
+
 char* get_cpu()
 {
    FILE *fp;
@@ -233,12 +275,56 @@ char* get_cpu()
    return cpu;
 }
 
+char* get_mem()
+{
+   FILE *fp;
+   char *mem;
+   char mem_free[20]  = "";
+   char mem_total[20] = "";
+   int int_mem_free;
+   int int_mem_total;
+   char ch;
+
+   mem = (char *) malloc(20);
+
+   fp = fopen("/proc/meminfo", "r");
+   
+   if (fp == NULL)
+   {
+      fprintf(stderr, "ERROR: Couldn't get memory\n");
+      strcpy(mem, "Unknown");
+   }
+   else
+   {
+      strcpy(mem, "");
+      
+      while (fgetc(fp) != ':') ;
+      while ((ch = fgetc(fp)) != 'k') 
+         sprintf(mem_total, "%s%c", mem_total, ch);
+
+      int_mem_total = atoi(mem_total);
+      
+      while (fgetc(fp) != ':') ;
+      while ((ch = fgetc(fp)) != 'k') 
+         sprintf(mem_free, "%s%c", mem_free, ch);
+      
+      int_mem_free = atoi(mem_free);
+
+      sprintf(mem, "%d / %d MB", int_mem_free/1000, int_mem_total/1000);
+      
+      fclose(fp);
+   }
+
+   return mem;
+}
+
 char* get_uptime()
 {
    FILE *fp;
    char *uptime;
    char ch;
    int int_uptime;
+   int buf;
 
    uptime = (char *) malloc(20);
 
@@ -252,29 +338,32 @@ char* get_uptime()
    else
    {
       strcpy(uptime, "");
-      
+
       while ((ch = fgetc(fp)) != ' ') 
          sprintf(uptime, "%s%c", uptime, ch);
 
       // convert to int
       int_uptime = atoi(uptime);
+      
+      buf = int_uptime / 3600 / 24;
+      if (buf == 1)
+         sprintf(uptime, "%d Day, ", buf);
+      if (buf > 1)
+         sprintf(uptime, "%d Days, ", buf);
+      else
+         strcpy(uptime, "");
+      
+      buf = int_uptime / 3600 % 24;
+      if (buf == 1)
+         sprintf(uptime, "%s%d Hour, ", uptime, buf);
+      else
+         sprintf(uptime, "%s%d Hours, ", uptime, buf);
 
-      char buf[10];
-
-      switch (int_uptime / 3600 / 24)
-      {
-         case 0:
-            sprintf(uptime, "%d:%d:%d", int_uptime / 3600, int_uptime / 60 % 60, int_uptime % 60);
-            break;
-         
-         case 1:
-            sprintf(uptime, "%d Day %d:%d:%d", int_uptime / 3600 / 24, int_uptime / 3600 % 24, int_uptime / 60 % 60, int_uptime % 60);
-            break;
-         
-         default:
-            sprintf(uptime, "%d Days %d:%d:%d", int_uptime / 3600 / 24, int_uptime / 3600 % 24, int_uptime / 60 % 60, int_uptime % 60);
-            break;
-      }
+      buf = int_uptime / 60 % 60;
+      if (buf == 1)
+         sprintf(uptime, "%s%d Min", uptime, buf);
+      else
+         sprintf(uptime, "%s%d Mins", uptime, buf);
       
       fclose(fp);
    }
@@ -311,23 +400,23 @@ char* get_wm(cairo_surface_t* sfc)
    return buf;
 }
 
-char* get_res(cairo_surface_t* sfc)
+char* get_screen_info(cairo_surface_t* sfc)
 {
    char *buf = (char *) malloc(20);
    Display *dsp = cairo_xlib_surface_get_display(sfc);
    Window root = DefaultRootWindow(dsp);
+	 int num_sizes;
+   Rotation current_rotation;
 
-	 static int x, y;
-	 static unsigned int width, height;
-	 static unsigned int border_width;
-	 static unsigned int depth;
-	 if(XGetGeometry(dsp, root, &root, &x, &y, &width, &height, &border_width, &depth) == False)
-	 {
-      fprintf(stderr, "ERROR: Couldn't get root window geometry\n");
+   XRRScreenSize *xrrs = XRRSizes(dsp, 0, &num_sizes);
+   XRRScreenConfiguration *conf = XRRGetScreenInfo(dsp, root);
+   short refresh_rate = XRRConfigCurrentRate(conf);
+   SizeID current_size_id = XRRConfigCurrentConfiguration(conf, &current_rotation);
 
-	 }
+   int width = xrrs[current_size_id].width;
+   int height = xrrs[current_size_id].height;
 
-   sprintf(buf, "%d x %d", width, height);
+   sprintf(buf, "%d x %d @ %dHz", width, height, refresh_rate);
 
    return buf;
 }
@@ -342,6 +431,7 @@ int main(int argc, char* argv[])
    int font_size = 20;
    int borders = 0;
    int transparency = 0;
+   unsigned int interval = 200;
 
    // parse args
    while ((opt = getopt(argc, argv, "fsbBtxy")) != -1)
@@ -402,32 +492,52 @@ int main(int argc, char* argv[])
 
    // get distros name
    char *distro = (char *) malloc(30);
-   sprintf(distro, "Distro:     %s", get_distro());
+   sprintf(distro, "Distro: %s", get_distro());
    
    // get wm name
    char *wm = (char *) malloc(30);
-   sprintf(wm,     "WM:         %s", get_wm(sfc));
+   sprintf(wm,     "WM:     %s", get_wm(sfc));
 
    // get kernel
    char *kernel = (char *) malloc(30);
-   sprintf(kernel, "Kernel:     %s", get_kernel());
+   sprintf(kernel, "Kernel: %s", get_kernel());
 
    // get resoulution
-   char *res = (char *) malloc(30);
-   sprintf(res,    "Resolution: %s", get_res(sfc));
+   char *screen_info = (char *) malloc(30);
+   sprintf(screen_info,    "Screen: %s", get_screen_info(sfc));
    
    // get cpu
    char *cpu = (char *) malloc(60);
-   sprintf(cpu,    "Cpu:       %s", get_cpu());
+   sprintf(cpu,    "Cpu:   %s", get_cpu());
+   
+   // get hostname and username
+   char *name = (char *) malloc(60);
+   sprintf(name,   "%s@%s", get_username(), get_hostname());
 
-   char *uptime;
+   char *seperator = (char *) malloc(strlen(name)+1);
+   strcpy(seperator, "");
+   for (int i = 0; i < strlen(name); i++)
+      sprintf(seperator, "%s=", seperator);
+
+   char *uptime, *mem;
    while( !isUserWantsWindowToClose )
    {
       render_text_line = 30; // start of text rendering
-   
-      // get uptime  needs to be done every second
-      uptime = (char *) malloc(30);
-      sprintf(uptime, "Uptime:     %s", get_uptime());
+      interval++;
+     
+      // needs to be done constantly
+      if (interval > 200)
+      {
+         // get uptime
+         uptime = (char *) malloc(30);
+         sprintf(uptime, "Uptime: %s", get_uptime());
+    
+         // get memory
+         mem = (char *) malloc(30);
+         sprintf(mem,    "Mem:    %s", get_mem());
+
+         interval = 0;
+      }
 
       switch(events_x11_win(sfc))
       {
@@ -465,12 +575,15 @@ int main(int argc, char* argv[])
       
       cairo_set_font_size(ctx, font_size);
 
+      cairo_render_text_line(ctx, name, font_size);
+      cairo_render_text_line(ctx, seperator, font_size);
       cairo_render_text_line(ctx, distro, font_size);
       cairo_render_text_line(ctx, kernel, font_size);
       cairo_render_text_line(ctx, uptime, font_size);
       cairo_render_text_line(ctx, cpu, font_size);
+      cairo_render_text_line(ctx, mem, font_size);
       cairo_render_text_line(ctx, wm, font_size);
-      cairo_render_text_line(ctx, res, font_size);
+      cairo_render_text_line(ctx, screen_info, font_size);
 
       cairo_pop_group_to_source(ctx);
       cairo_paint(ctx);
@@ -487,8 +600,10 @@ int main(int argc, char* argv[])
    free(kernel);
    free(cpu);
    free(wm);
-   free(res);
+   free(screen_info);
    free(uptime);
+   free(mem);
+   free(seperator);
 
    return 0;
 }
