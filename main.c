@@ -420,12 +420,13 @@ int main(int argc, char* argv[])
    char *cpu = (char *) malloc(60);
    sprintf(cpu,    "Cpu:       %s", get_cpu());
 
+   char *uptime;
    while( !isUserWantsWindowToClose )
    {
       render_text_line = 30; // start of text rendering
    
       // get uptime  needs to be done every second
-      char *uptime = (char *) malloc(30);
+      uptime = (char *) malloc(30);
       sprintf(uptime, "Uptime:     %s", get_uptime());
 
       switch(events_x11_win(sfc))
@@ -475,7 +476,6 @@ int main(int argc, char* argv[])
       cairo_paint(ctx);
       cairo_surface_flush(sfc);
 
-      free(uptime);
       // sleep
       nanosleep(&ts, NULL);
    }
@@ -488,6 +488,7 @@ int main(int argc, char* argv[])
    free(cpu);
    free(wm);
    free(res);
+   free(uptime);
 
    return 0;
 }
