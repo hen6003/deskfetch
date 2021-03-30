@@ -133,15 +133,18 @@ int cairo_render_text_line(cairo_t* ctx, char* str, int spacing)
    render_text_line += spacing;
 }
 
-char* get_image_path()
+int get_image_path(char* path)
 {
-   char *path = (char *) malloc(30);
+   if (!access(path, R_OK))
+      return 0;
+   else if (path[0] != 0x0)
+      fprintf(stderr, "Couldn't find image: '%s'\n", path);
+
    char home[10];
    strcpy(home, getenv("HOME"));
-
    sprintf(path, "%s/.logo.png", home);
 
-   return path;
+   return 0;
 }
 
 char* get_distro()
@@ -242,6 +245,34 @@ char* get_hostname()
    }
 
    return hostname;
+}
+
+char* get_device()
+{
+   FILE *fp;
+   char *device;
+   char ch;
+
+   device = (char *) malloc(50);
+
+   fp = fopen("/sys/devices/virtual/dmi/id/product_version", "r");
+   
+   if (fp == NULL)
+   {
+      fprintf(stderr, "ERROR: Couldn't get device info\n");
+      strcpy(device, "Unknown");
+   }
+   else
+   {
+      strcpy(device, "");
+      
+      while ((ch = fgetc(fp)) != '\n')
+         sprintf(device, "%s%c", device, ch);
+      
+      fclose(fp);
+   }
+
+   return device;
 }
 
 char* get_cpu()
@@ -432,13 +463,18 @@ int main(int argc, char* argv[])
    int borders = 0;
    int transparency = 0;
    unsigned int interval = 200;
+   char *image_path = (char *) malloc(30);
+   strcpy(image_path, "");
 
    // parse args
-   while ((opt = getopt(argc, argv, "fsbBtxy")) != -1)
+   while ((opt = getopt(argc, argv, "fsbBtxyi")) != -1)
       switch (opt)
       {
          case 'f': 
             strcpy(font, argv[optind]);
+            break;
+         case 'i': 
+            strcpy(image_path, argv[optind]);
             break;
          case 's': 
             font_size = atoi(argv[optind]);
@@ -477,9 +513,9 @@ int main(int argc, char* argv[])
    cairo_pattern_t *image;
    cairo_matrix_t matrix;
    int image_w, image_h;
-   char *image_path = (char *) malloc(30);
-   // strcpy(image_path, "logo.png");
-   strcpy(image_path, get_image_path());
+   
+   if (get_image_path(image_path))
+      fprintf(stderr, "ERROR: Couldn't 'find image");
 
    image_sfc = cairo_image_surface_create_from_png(image_path);
    image_w = cairo_image_surface_get_width(image_sfc);
@@ -509,6 +545,10 @@ int main(int argc, char* argv[])
    // get cpu
    char *cpu = (char *) malloc(60);
    sprintf(cpu,    "Cpu:   %s", get_cpu());
+   
+   // get device
+   char *device = (char *) malloc(30);
+   sprintf(device, "Device: %s", get_device());
    
    // get hostname and username
    char *name = (char *) malloc(60);
@@ -580,6 +620,7 @@ int main(int argc, char* argv[])
       cairo_render_text_line(ctx, distro, font_size);
       cairo_render_text_line(ctx, kernel, font_size);
       cairo_render_text_line(ctx, uptime, font_size);
+      cairo_render_text_line(ctx, device, font_size);
       cairo_render_text_line(ctx, cpu, font_size);
       cairo_render_text_line(ctx, mem, font_size);
       cairo_render_text_line(ctx, wm, font_size);
@@ -604,6 +645,7 @@ int main(int argc, char* argv[])
    free(uptime);
    free(mem);
    free(seperator);
+   free(device);
 
    return 0;
 }
