@@ -8,6 +8,7 @@
 
 #include <cairo/cairo.h>
 #include <cairo/cairo-xlib.h>
+// #include <pango/pangocairo.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -90,8 +91,7 @@ cairo_surface_t *setup_x11_win()
    attr.background_pixmap = None;
    attr.border_pixel      = 0;
    win = XCreateWindow(    display, DefaultRootWindow(display),
-                           win_x, win_y, win_w, win_h, // x,y,width,height : are possibly opverwriteen by window manager
-                           0,
+                           win_x, win_y, win_w, win_h, 0,
                            visualinfo.depth,
                            InputOutput,
                            visualinfo.visual,
@@ -147,13 +147,11 @@ int get_image_path(char* path)
    return 0;
 }
 
-char* get_distro()
+char* get_distro(char* buf)
 {
    FILE *fp;
-   char *distro;
+   char *distro = buf;
    char ch;
-
-   distro = (char *) malloc(20);
 
    fp = fopen("/etc/os-release", "r");
    
@@ -176,13 +174,11 @@ char* get_distro()
    return distro;
 }
 
-char* get_kernel()
+char* get_kernel(char* buf)
 {
    FILE *fp;
-   char *kernel;
+   char *kernel = buf;
    char ch;
-
-   kernel = (char *) malloc(20);
 
    fp = fopen("/proc/version", "r");
    
@@ -206,26 +202,22 @@ char* get_kernel()
    return kernel;
 }
 
-char* get_username()
+char* get_username(char* buf)
 {
    FILE *fp;
-   char *username;
+   char *username = buf;
    char ch;
-
-   username = (char *) malloc(50);
 
    username = getenv("USER");
 
    return username;
 }
 
-char* get_hostname()
+char* get_hostname(char* buf)
 {
    FILE *fp;
-   char *hostname;
+   char *hostname = buf;
    char ch;
-
-   hostname = (char *) malloc(50);
 
    fp = fopen("/etc/hostname", "r");
    
@@ -247,13 +239,11 @@ char* get_hostname()
    return hostname;
 }
 
-char* get_device()
+char* get_device(char* buf)
 {
    FILE *fp;
-   char *device;
+   char *device = buf;
    char ch;
-
-   device = (char *) malloc(50);
 
    fp = fopen("/sys/devices/virtual/dmi/id/product_version", "r");
    
@@ -275,13 +265,11 @@ char* get_device()
    return device;
 }
 
-char* get_cpu()
+char* get_cpu(char* buf)
 {
    FILE *fp;
-   char *cpu;
+   char *cpu = buf;
    char ch;
-
-   cpu = (char *) malloc(50);
 
    fp = fopen("/proc/cpuinfo", "r");
    
@@ -306,17 +294,15 @@ char* get_cpu()
    return cpu;
 }
 
-char* get_mem()
+char* get_mem(char* buf)
 {
    FILE *fp;
-   char *mem;
+   char *mem = buf;
    char mem_free[20]  = "";
    char mem_total[20] = "";
    int int_mem_free;
    int int_mem_total;
    char ch;
-
-   mem = (char *) malloc(20);
 
    fp = fopen("/proc/meminfo", "r");
    
@@ -349,15 +335,13 @@ char* get_mem()
    return mem;
 }
 
-char* get_uptime()
+char* get_uptime(char* char_buf)
 {
    FILE *fp;
-   char *uptime;
+   char *uptime = char_buf;
    char ch;
    int int_uptime;
    int buf;
-
-   uptime = (char *) malloc(20);
 
    fp = fopen("/proc/uptime", "r");
    
@@ -402,38 +386,55 @@ char* get_uptime()
    return uptime;
 }
 
-char* get_wm(cairo_surface_t* sfc)
+char* get_wm(cairo_surface_t* sfc, char* buf)
 {
-   char *buf = (char *) malloc(20);
-   Display *dsp = cairo_xlib_surface_get_display(sfc);
-   Window root = DefaultRootWindow(dsp);
-   XClassHint *classhint = XAllocClassHint();
-   Bool xerror = False;
-   Status s;
+  //  Display *dsp = cairo_xlib_surface_get_display(sfc);
+  //  Window root = DefaultRootWindow(dsp);
+  //  Window win;
+  //  XClassHint *classhint = XAllocClassHint();
+  //  Bool xerror = False;
+  //  Status s;
+  // 
+  //  if(xerror)
+  //  {
+  //     fprintf(stderr, "ERROR: Couldn't allocate classhint\n");
+  //     return "Unknown";
+  //  }
+  // 
+  //  int di;
+	 // unsigned long dl;
+	 // unsigned char *p = NULL;
+	 // Atom da, atom = None;
+	 // Atom req = XA_ATOM;
+	 // if (prop == xatom[XembedInfo])
+	 // 	req = xatom[XembedInfo];
+	 // 
+	 // if (XGetWindowProperty(dpy, c->win, prop, 0L, sizeof atom, False, req,
+	 //   &da, &di, &dl, &dl, &p) == Success && p) {
+	 //   atom = *(Atom *)p;
+	 //   if (da == xatom[XembedInfo] && dl == 2)
+	 //     atom = ((Atom *)p)[1];
+	 //   XFree(p);
+	 // } 
+  // 
+  //  s = XGetClassHint(dsp, win, classhint);
+  // 
+  //  buf = classhint->res_name;
+  // 
+  //  if(xerror || s)
+  //     printf("\tname: %s\n\tclass: %s\n", classhint->res_name, classhint->res_class);
+  //  else
+  //     printf("ERROR: Couldn't get root window's class\n");
+  // 
+  //  XFree(classhint->res_name);
+  //  XFree(classhint->res_class);
    
-   if(xerror)
-   {
-      fprintf(stderr, "ERROR: Couldn't allocate classhint\n");
-   }
-
-   s = XGetClassHint(dsp, root, classhint);
-
-   buf = classhint->res_name;
-
-   if(xerror || s)
-      printf("\tname: %s\n\tclass: %s\n", classhint->res_name, classhint->res_class);
-   else
-      printf("ERROR: Couldn't get root window's class\n");
-
-   XFree(classhint->res_name);
-   XFree(classhint->res_class);
-
+   strcpy(buf, "Unknown混");
    return buf;
 }
 
-char* get_screen_info(cairo_surface_t* sfc)
+char* get_screen_info(cairo_surface_t* sfc, char* buf)
 {
-   char *buf = (char *) malloc(20);
    Display *dsp = cairo_xlib_surface_get_display(sfc);
    Window root = DefaultRootWindow(dsp);
 	 int num_sizes;
@@ -464,6 +465,7 @@ int main(int argc, char* argv[])
    int transparency = 0;
    unsigned int interval = 200;
    char *image_path = (char *) malloc(30);
+   char *char_buf = (char *) malloc(60);
    strcpy(image_path, "");
 
    // parse args
@@ -501,12 +503,13 @@ int main(int argc, char* argv[])
    ctx = cairo_create(sfc);
 
    // set font
-   cairo_select_font_face (ctx,
-         font,
-         CAIRO_FONT_SLANT_NORMAL,
-         CAIRO_FONT_WEIGHT_NORMAL);
-
-   free(font);
+   // PangoLayout *layout;
+   // PangoFontDescription *font_description;
+   // 
+   // font_description = pango_font_description_new ();
+   // pango_font_description_set_family (font_description, font);
+   // pango_font_description_set_weight (font_description, PANGO_WEIGHT_NORMAL);
+   // pango_font_description_set_absolute_size (font_description, font_size * PANGO_SCALE);
 
    // get distro image
    cairo_surface_t *image_sfc;
@@ -528,31 +531,32 @@ int main(int argc, char* argv[])
 
    // get distros name
    char *distro = (char *) malloc(30);
-   sprintf(distro, "Distro: %s", get_distro());
+   sprintf(distro, "Distro: %s", get_distro(char_buf));
    
    // get wm name
    char *wm = (char *) malloc(30);
-   sprintf(wm,     "WM:     %s", get_wm(sfc));
+   sprintf(wm,     "WM:     %s", get_wm(sfc, char_buf));
 
    // get kernel
    char *kernel = (char *) malloc(30);
-   sprintf(kernel, "Kernel: %s", get_kernel());
+   sprintf(kernel, "Kernel: %s", get_kernel(char_buf));
 
    // get resoulution
    char *screen_info = (char *) malloc(30);
-   sprintf(screen_info,    "Screen: %s", get_screen_info(sfc));
+   sprintf(screen_info,    "Screen: %s", get_screen_info(sfc, char_buf));
    
    // get cpu
    char *cpu = (char *) malloc(60);
-   sprintf(cpu,    "Cpu:   %s", get_cpu());
+   sprintf(cpu,    "Cpu:   %s", get_cpu(char_buf));
    
    // get device
    char *device = (char *) malloc(30);
-   sprintf(device, "Device: %s", get_device());
+   sprintf(device, "Device: %s", get_device(char_buf));
    
    // get hostname and username
    char *name = (char *) malloc(60);
-   sprintf(name,   "%s@%s", get_username(), get_hostname());
+   sprintf(name,   "%s@", get_username(char_buf));
+   strcat(name, get_hostname(char_buf));
 
    char *seperator = (char *) malloc(strlen(name)+1);
    strcpy(seperator, "");
@@ -560,6 +564,8 @@ int main(int argc, char* argv[])
       sprintf(seperator, "%s=", seperator);
 
    char *uptime, *mem;
+   uptime = (char *) malloc(30);
+   mem = (char *) malloc(30);
    while( !isUserWantsWindowToClose )
    {
       render_text_line = 30; // start of text rendering
@@ -569,12 +575,10 @@ int main(int argc, char* argv[])
       if (interval > 200)
       {
          // get uptime
-         uptime = (char *) malloc(30);
-         sprintf(uptime, "Uptime: %s", get_uptime());
+         sprintf(uptime, "Uptime: %s", get_uptime(char_buf));
     
          // get memory
-         mem = (char *) malloc(30);
-         sprintf(mem,    "Mem:    %s", get_mem());
+         sprintf(mem,    "Mem:    %s", get_mem(char_buf));
 
          interval = 0;
       }
@@ -646,6 +650,7 @@ int main(int argc, char* argv[])
    free(mem);
    free(seperator);
    free(device);
+   free(char_buf);
 
    return 0;
 }
