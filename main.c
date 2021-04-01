@@ -20,6 +20,7 @@ int win_x = 0;
 int win_y = 0;
 int win_w = 800;
 int win_h = 256;
+int needs_redraw = 0;
 
 /*! Destroy cairo Xlib surface and close X connection.
  *  */
@@ -50,12 +51,15 @@ int events_x11_win(cairo_surface_t *sfc)
 
       switch (e.type)
       {
+         case Expose:
+            needs_redraw = 1;
+            return 0;
          case ButtonPress:
             return -e.xbutton.button;
          case KeyPress:
             XLookupString(&e.xkey, keybuf, sizeof(keybuf), &key, NULL);
             return key;
-				case ClientMessage:
+				 case ClientMessage:
          		// check if the client message was send by window manager to indicate user wants to close the
          		if (  e.xclient.message_type  == XInternAtom( display, "WM_PROTOCOLS", 1)
          		      && e.xclient.data.l[0]  == XInternAtom( display, "WM_DELETE_WINDOW", 1)
@@ -297,9 +301,9 @@ char* get_mem(char* buf)
 {
    FILE *fp;
    char *mem = buf;
-   char mem_free[20]  = "";
+   char mem_available[20]  = "";
    char mem_total[20] = "";
-   int int_mem_free;
+   int int_mem_available;
    int int_mem_total;
    char ch;
 
@@ -321,12 +325,15 @@ char* get_mem(char* buf)
       int_mem_total = atoi(mem_total);
       
       while (fgetc(fp) != ':') ;
+      while (fgetc(fp) != ':') ;
       while ((ch = fgetc(fp)) != 'k') 
-         sprintf(mem_free, "%s%c", mem_free, ch);
+         sprintf(mem_available, "%s%c", mem_available, ch);
       
-      int_mem_free = atoi(mem_free);
+      int_mem_available = atoi(mem_available);
 
-      sprintf(mem, "%d / %d MB", int_mem_free/1000, int_mem_total/1000);
+      int_mem_available = int_mem_total - int_mem_available;
+
+      sprintf(mem, "%d / %d MB", int_mem_available/1024, int_mem_total/1024);
       
       fclose(fp);
    }
@@ -362,7 +369,7 @@ char* get_uptime(char* char_buf)
       buf = int_uptime / 3600 / 24;
       if (buf == 1)
          sprintf(uptime, "%d Day, ", buf);
-      if (buf > 1)
+      else if (buf > 1)
          sprintf(uptime, "%d Days, ", buf);
       else
          strcpy(uptime, "");
@@ -538,28 +545,34 @@ int main(int argc, char* argv[])
    free(image_path);
 
    // get distros name
-   char *distro = (char *) malloc(30);
-   sprintf(distro, "Distro: %s", get_distro(char_buf));
+   get_distro(char_buf);
+   char *distro = (char *) malloc(strlen(char_buf) + 9);
+   sprintf(distro, "Distro: %s", char_buf);
    
    // get wm name
-   char *wm = (char *) malloc(30);
-   sprintf(wm,     "WM:     %s", get_wm(sfc, char_buf));
+   get_wm(sfc, char_buf);
+   char *wm = (char *) malloc(strlen(char_buf) + 9);
+   sprintf(wm,     "WM:     %s", char_buf);
 
    // get kernel
-   char *kernel = (char *) malloc(30);
-   sprintf(kernel, "Kernel: %s", get_kernel(char_buf));
+   get_kernel(char_buf);
+   char *kernel = (char *) malloc(strlen(char_buf) + 9);
+   sprintf(kernel, "Kernel: %s", char_buf);
 
    // get resoulution
-   char *screen_info = (char *) malloc(30);
-   sprintf(screen_info,    "Screen: %s", get_screen_info(sfc, char_buf));
+   get_screen_info(sfc, char_buf);
+   char *screen_info = (char *) malloc(strlen(char_buf) + 9);
+   sprintf(screen_info,    "Screen: %s", char_buf);
    
    // get cpu
-   char *cpu = (char *) malloc(60);
-   sprintf(cpu,    "Cpu:   %s", get_cpu(char_buf));
+   get_cpu(char_buf);
+   char *cpu = (char *) malloc(strlen(char_buf) + 9);
+   sprintf(cpu,    "Cpu:   %s", char_buf);
    
    // get device
-   char *device = (char *) malloc(30);
-   sprintf(device, "Device: %s", get_device(char_buf));
+   get_device(char_buf);
+   char *device = (char *) malloc(strlen(char_buf) + 9);
+   sprintf(device, "Device: %s", char_buf);
    
    // get hostname and username
    char *name = (char *) malloc(60);
@@ -589,6 +602,7 @@ int main(int argc, char* argv[])
          sprintf(mem,    "Mem:    %s", get_mem(char_buf));
 
          interval = 0;
+         needs_redraw = 1;
       }
 
       switch(events_x11_win(sfc))
@@ -598,47 +612,52 @@ int main(int argc, char* argv[])
             break;
       }
 
-      /* Set surface to translucent color (r, g, b, a) without disturbing graphics state. */
-      cairo_save(ctx);
-      cairo_set_source_rgba(ctx, 0, 0, 0, transparency / 256.0);
-      cairo_set_operator(ctx, CAIRO_OPERATOR_SOURCE);
-      cairo_paint(ctx);
-      cairo_restore(ctx);
-      
-      // begin drawing
-      cairo_push_group(ctx);
-
-      cairo_set_source(ctx, image);
-      cairo_paint(ctx);
-      cairo_stroke(ctx);
-      
-      cairo_set_source_rgba(ctx, 1, 1, 1, 1);
-
-      if (borders)
+      if (needs_redraw)
       {
-         cairo_move_to(ctx, 0, 0);
-         cairo_line_to(ctx, 0, win_h);
-         cairo_line_to(ctx, win_w, win_h);
-         cairo_line_to(ctx, win_w, 0);
-         cairo_line_to(ctx, 0, 0);
-         cairo_set_line_width(ctx, 1);
+         needs_redraw = 0;
+
+         /* Set surface to translucent color (r, g, b, a) without disturbing graphics state. */
+         cairo_save(ctx);
+         cairo_set_source_rgba(ctx, 0, 0, 0, transparency / 256.0);
+         cairo_set_operator(ctx, CAIRO_OPERATOR_SOURCE);
+         cairo_paint(ctx);
+         cairo_restore(ctx);
+         
+         // begin drawing
+         cairo_push_group(ctx);
+
+         cairo_set_source(ctx, image);
+         cairo_paint(ctx);
          cairo_stroke(ctx);
+         
+         cairo_set_source_rgba(ctx, 1, 1, 1, 1);
+
+         if (borders)
+         {
+            cairo_move_to(ctx, 0, 0);
+            cairo_line_to(ctx, 0, win_h);
+            cairo_line_to(ctx, win_w, win_h);
+            cairo_line_to(ctx, win_w, 0);
+            cairo_line_to(ctx, 0, 0);
+            cairo_set_line_width(ctx, 1);
+            cairo_stroke(ctx);
+         }
+
+         pango_render_text_line(ctx, layout, name, font_size);
+         pango_render_text_line(ctx, layout, seperator, font_size);
+         pango_render_text_line(ctx, layout, distro, font_size);
+         pango_render_text_line(ctx, layout, kernel, font_size);
+         pango_render_text_line(ctx, layout, uptime, font_size);
+         pango_render_text_line(ctx, layout, device, font_size);
+         pango_render_text_line(ctx, layout, cpu, font_size);
+         pango_render_text_line(ctx, layout, mem, font_size);
+         pango_render_text_line(ctx, layout, wm, font_size);
+         pango_render_text_line(ctx, layout, screen_info, font_size);
+
+         cairo_pop_group_to_source(ctx);
+         cairo_paint(ctx);
+         cairo_surface_flush(sfc);
       }
-
-      pango_render_text_line(ctx, layout, name, font_size);
-      pango_render_text_line(ctx, layout, seperator, font_size);
-      pango_render_text_line(ctx, layout, distro, font_size);
-      pango_render_text_line(ctx, layout, kernel, font_size);
-      pango_render_text_line(ctx, layout, uptime, font_size);
-      pango_render_text_line(ctx, layout, device, font_size);
-      pango_render_text_line(ctx, layout, cpu, font_size);
-      pango_render_text_line(ctx, layout, mem, font_size);
-      pango_render_text_line(ctx, layout, wm, font_size);
-      pango_render_text_line(ctx, layout, screen_info, font_size);
-
-      cairo_pop_group_to_source(ctx);
-      cairo_paint(ctx);
-      cairo_surface_flush(sfc);
 
       // sleep
       nanosleep(&ts, NULL);
