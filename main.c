@@ -8,7 +8,7 @@
 
 #include <cairo/cairo.h>
 #include <cairo/cairo-xlib.h>
-// #include <pango/pangocairo.h>
+#include <pango/pangocairo.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -125,10 +125,11 @@ cairo_surface_t *setup_x11_win()
 
 int render_text_line;
 
-int cairo_render_text_line(cairo_t* ctx, char* str, int spacing)
+int pango_render_text_line(cairo_t* ctx, PangoLayout *layout, char* str, int spacing)
 {
    cairo_move_to(ctx, 280, render_text_line);
-   cairo_show_text(ctx, str);
+   pango_layout_set_text(layout, str, -1);
+   pango_cairo_show_layout(ctx, layout);
 
    render_text_line += spacing;
 }
@@ -204,9 +205,7 @@ char* get_kernel(char* buf)
 
 char* get_username(char* buf)
 {
-   FILE *fp;
    char *username = buf;
-   char ch;
 
    username = getenv("USER");
 
@@ -429,7 +428,7 @@ char* get_wm(cairo_surface_t* sfc, char* buf)
   //  XFree(classhint->res_name);
   //  XFree(classhint->res_class);
    
-   strcpy(buf, "Unknown混");
+   strcpy(buf, "Unknown");
    return buf;
 }
 
@@ -460,7 +459,7 @@ int main(int argc, char* argv[])
    cairo_t *ctx;
    char opt;
    char *font = (char *) malloc(20);
-   int font_size = 20;
+   int font_size;
    int borders = 0;
    int transparency = 0;
    unsigned int interval = 200;
@@ -469,7 +468,7 @@ int main(int argc, char* argv[])
    strcpy(image_path, "");
 
    // parse args
-   while ((opt = getopt(argc, argv, "fsbBtxyi")) != -1)
+   while ((opt = getopt(argc, argv, "fbBtxyi")) != -1)
       switch (opt)
       {
          case 'f': 
@@ -478,9 +477,9 @@ int main(int argc, char* argv[])
          case 'i': 
             strcpy(image_path, argv[optind]);
             break;
-         case 's': 
-            font_size = atoi(argv[optind]);
-            break;
+         // case 's': 
+         //    font_size = atoi(argv[optind]);
+         //    break;
          case 't': 
             transparency = atoi(argv[optind]);
             break;
@@ -502,14 +501,23 @@ int main(int argc, char* argv[])
    sfc = setup_x11_win();
    ctx = cairo_create(sfc);
 
-   // set font
-   // PangoLayout *layout;
-   // PangoFontDescription *font_description;
-   // 
-   // font_description = pango_font_description_new ();
-   // pango_font_description_set_family (font_description, font);
-   // pango_font_description_set_weight (font_description, PANGO_WEIGHT_NORMAL);
-   // pango_font_description_set_absolute_size (font_description, font_size * PANGO_SCALE);
+   // setup font
+   PangoLayout *layout;
+   PangoFontDescription *font_description;
+
+   // font_description = pango_font_description_new();
+   font_description = pango_font_description_from_string(font);
+   // pango_font_description_set_family(font_description, font);
+   // pango_font_description_set_weight(font_description, PANGO_WEIGHT_NORMAL);
+   // pango_font_description_set_absolute_size(font_description, font_size * PANGO_SCALE);
+   
+   layout = pango_cairo_create_layout(ctx);
+   pango_layout_set_font_description (layout, font_description);
+   pango_font_description_free(font_description);
+
+   pango_layout_get_size(layout, NULL, &font_size);
+
+   font_size = font_size / PANGO_SCALE;
 
    // get distro image
    cairo_surface_t *image_sfc;
@@ -568,7 +576,7 @@ int main(int argc, char* argv[])
    mem = (char *) malloc(30);
    while( !isUserWantsWindowToClose )
    {
-      render_text_line = 30; // start of text rendering
+      render_text_line = 15; // start of text rendering
       interval++;
      
       // needs to be done constantly
@@ -616,19 +624,17 @@ int main(int argc, char* argv[])
          cairo_set_line_width(ctx, 1);
          cairo_stroke(ctx);
       }
-      
-      cairo_set_font_size(ctx, font_size);
 
-      cairo_render_text_line(ctx, name, font_size);
-      cairo_render_text_line(ctx, seperator, font_size);
-      cairo_render_text_line(ctx, distro, font_size);
-      cairo_render_text_line(ctx, kernel, font_size);
-      cairo_render_text_line(ctx, uptime, font_size);
-      cairo_render_text_line(ctx, device, font_size);
-      cairo_render_text_line(ctx, cpu, font_size);
-      cairo_render_text_line(ctx, mem, font_size);
-      cairo_render_text_line(ctx, wm, font_size);
-      cairo_render_text_line(ctx, screen_info, font_size);
+      pango_render_text_line(ctx, layout, name, font_size);
+      pango_render_text_line(ctx, layout, seperator, font_size);
+      pango_render_text_line(ctx, layout, distro, font_size);
+      pango_render_text_line(ctx, layout, kernel, font_size);
+      pango_render_text_line(ctx, layout, uptime, font_size);
+      pango_render_text_line(ctx, layout, device, font_size);
+      pango_render_text_line(ctx, layout, cpu, font_size);
+      pango_render_text_line(ctx, layout, mem, font_size);
+      pango_render_text_line(ctx, layout, wm, font_size);
+      pango_render_text_line(ctx, layout, screen_info, font_size);
 
       cairo_pop_group_to_source(ctx);
       cairo_paint(ctx);

@@ -1,7 +1,9 @@
+CFLAGS=`pkg-config --cflags --libs pango`
+
 all: deskfetch
 
 deskfetch: main.o
-	gcc main.o -o deskfetch -lX11 -lcairo -lXrandr
+	gcc main.o -o deskfetch -lX11 -lcairo -lXrandr -lpango-1.0 -lpangocairo-1.0
 
 clean:
 	rm *.o deskfetch
