@@ -54,19 +54,12 @@ int events_x11_win(cairo_surface_t *sfc)
          case Expose:
             needs_redraw = 1;
             return 0;
-         case ButtonPress:
-            return -e.xbutton.button;
-         case KeyPress:
-            XLookupString(&e.xkey, keybuf, sizeof(keybuf), &key, NULL);
-            return key;
 				 case ClientMessage:
          		// check if the client message was send by window manager to indicate user wants to close the
          		if (  e.xclient.message_type  == XInternAtom( display, "WM_PROTOCOLS", 1)
          		      && e.xclient.data.l[0]  == XInternAtom( display, "WM_DELETE_WINDOW", 1)
          		      )
-         		{
          		   isUserWantsWindowToClose = 1;
-         		}
          		break;
          // default:
          //    fprintf(stderr, "Dropping unhandled XEevent.type = %d.\n", e.type);
@@ -88,10 +81,9 @@ cairo_surface_t *setup_x11_win()
    
    // create window
    Window   win;
-   GC       gc;
    XSetWindowAttributes attr;
    attr.colormap   = XCreateColormap( display, DefaultRootWindow(display), visualinfo.visual, AllocNone);
-   attr.event_mask = ExposureMask | KeyPressMask;
+   attr.event_mask = ExposureMask;
    attr.background_pixmap = None;
    attr.border_pixel      = 0;
    win = XCreateWindow(    display, DefaultRootWindow(display),
@@ -102,7 +94,6 @@ cairo_surface_t *setup_x11_win()
                            CWColormap|CWEventMask|CWBackPixmap|CWBorderPixel,
                            &attr
                            );
-   gc = XCreateGC( display, win, 0, 0);
 
    // set title bar name of window
    XStoreName( display, win, "Deskfetch" );
@@ -587,9 +578,9 @@ int main(int argc, char* argv[])
    char *uptime, *mem;
    uptime = (char *) malloc(30);
    mem = (char *) malloc(30);
-   while( !isUserWantsWindowToClose )
+   while(!isUserWantsWindowToClose)
    {
-      render_text_line = 15; // start of text rendering
+      render_text_line = 10; // start of text rendering
       interval++;
      
       // needs to be done constantly
@@ -605,12 +596,7 @@ int main(int argc, char* argv[])
          needs_redraw = 1;
       }
 
-      switch(events_x11_win(sfc))
-      {
-         case XK_Escape:
-            isUserWantsWindowToClose = 1;
-            break;
-      }
+      events_x11_win(sfc);
 
       if (needs_redraw)
       {

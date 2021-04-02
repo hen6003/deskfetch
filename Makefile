@@ -1,12 +1,13 @@
-CFLAGS=`pkg-config --cflags --libs pango`
+CFLAGS = `pkg-config --cflags --libs pango`
+LIBS   = `pkg-config --libs pangocairo x11 xrandr`
 
 all: deskfetch
 
 deskfetch: main.o
-	gcc main.o -o deskfetch -lX11 -lcairo -lXrandr -lpango-1.0 -lpangocairo-1.0
+	gcc main.o -o $@ $(LIBS) $(CFLAGS)
 
 clean:
-	rm *.o deskfetch
+	rm -f *.o deskfetch
 
 # install: all
 # 	mkdir -p ${DESTDIR}${PREFIX}/bin
