@@ -324,7 +324,7 @@ char* get_mem(char* buf)
 
       int_mem_available = int_mem_total - int_mem_available;
 
-      sprintf(mem, "%d / %d MB", int_mem_available/1024, int_mem_total/1024);
+      sprintf(mem, "%d / %d MiB", int_mem_available/1024, int_mem_total/1024);
       
       fclose(fp);
    }
@@ -385,48 +385,52 @@ char* get_uptime(char* char_buf)
 
 char* get_wm(cairo_surface_t* sfc, char* buf)
 {
-  //  Display *dsp = cairo_xlib_surface_get_display(sfc);
-  //  Window root = DefaultRootWindow(dsp);
-  //  Window win;
-  //  XClassHint *classhint = XAllocClassHint();
-  //  Bool xerror = False;
-  //  Status s;
-  // 
-  //  if(xerror)
-  //  {
-  //     fprintf(stderr, "ERROR: Couldn't allocate classhint\n");
-  //     return "Unknown";
-  //  }
-  // 
-  //  int di;
-	 // unsigned long dl;
-	 // unsigned char *p = NULL;
-	 // Atom da, atom = None;
-	 // Atom req = XA_ATOM;
-	 // if (prop == xatom[XembedInfo])
-	 // 	req = xatom[XembedInfo];
-	 // 
-	 // if (XGetWindowProperty(dpy, c->win, prop, 0L, sizeof atom, False, req,
-	 //   &da, &di, &dl, &dl, &p) == Success && p) {
-	 //   atom = *(Atom *)p;
-	 //   if (da == xatom[XembedInfo] && dl == 2)
-	 //     atom = ((Atom *)p)[1];
-	 //   XFree(p);
-	 // } 
-  // 
-  //  s = XGetClassHint(dsp, win, classhint);
-  // 
-  //  buf = classhint->res_name;
-  // 
-  //  if(xerror || s)
-  //     printf("\tname: %s\n\tclass: %s\n", classhint->res_name, classhint->res_class);
-  //  else
-  //     printf("ERROR: Couldn't get root window's class\n");
-  // 
-  //  XFree(classhint->res_name);
-  //  XFree(classhint->res_class);
+   Display *dsp = cairo_xlib_surface_get_display(sfc);
+   Window root = DefaultRootWindow(dsp);
+   Window win;
+   XClassHint *classhint = XAllocClassHint();
+   Bool xerror = False;
+   Status s;
+
+   if(xerror)
+   {
+      fprintf(stderr, "ERROR: Couldn't allocate classhint\n");
+      return "Unknown";
+   }
+
+   int di;
+	 unsigned long dl;
+	 unsigned char *p = NULL;
+	 Atom da, atom = None;
+	 Atom req = XA_WINDOW;
+
+   Atom prop = XInternAtom(dsp, "_NET_SUPPORTING_WM_CHECK", 0);
+
+	 if (XGetWindowProperty(dsp, root, prop, 0L, sizeof atom, False, req,
+	   &da, &di, &dl, &dl, &p) == Success && p) {
+	   atom = *(Atom *)p;
+	   // if (da == xatom[XembedInfo] && dl == 2)
+	     // atom = ((Atom *)p)[2];
+	   XFree(p);
+	 } 
+
+   // printf("%d\n", atom);
+   win = atom;
+
+   s = XGetClassHint(dsp, win, classhint);
+
+   // buf = classhint->res_name;
+   strcpy(buf, classhint->res_class);
+
+   if(!xerror && !s)
+   {
+      printf("ERROR: Couldn't get root window's class\n");
+      strcpy(buf, "Unknown");
+   }
+
+   XFree(classhint->res_name);
+   XFree(classhint->res_class);
    
-   strcpy(buf, "Unknown");
    return buf;
 }
 
@@ -455,18 +459,20 @@ int main(int argc, char* argv[])
    struct timespec ts = {0, 5000000};
    cairo_surface_t *sfc;
    cairo_t *ctx;
-   char opt;
-   char *font = (char *) malloc(20);
-   int font_size;
+   int font_size = 0;
    int borders = 0;
    int transparency = 0;
    unsigned int interval = 200;
+   char opt;
+   char *font       = (char *) malloc(20);
    char *image_path = (char *) malloc(30);
-   char *char_buf = (char *) malloc(60);
+   char *char_buf   = (char *) malloc(60);
+
    strcpy(image_path, "");
+   strcpy(font, "monospace 14");
 
    // parse args
-   while ((opt = getopt(argc, argv, "fbBtxyi")) != -1)
+   while ((opt = getopt(argc, argv, "fbBtxyih")) != -1)
       switch (opt)
       {
          case 'f': 
@@ -475,9 +481,6 @@ int main(int argc, char* argv[])
          case 'i': 
             strcpy(image_path, argv[optind]);
             break;
-         // case 's': 
-         //    font_size = atoi(argv[optind]);
-         //    break;
          case 't': 
             transparency = atoi(argv[optind]);
             break;
@@ -493,6 +496,18 @@ int main(int argc, char* argv[])
          case 'B':
             borders = 0;
             break;
+         default:
+            printf("%s [OPTION]...\n"
+                   "a neofetch that shows on the desktop\n\n"
+                   "  -f   font to use (monospace 14)\n"
+                   "  -i   alternative image path (~/.logo.png)\n"
+                   "  -t   background transparency\n"
+                   "  -x/y window coordinates\n"
+                   "  -b   enable borders\n"
+                   "  -B   disable borders\n", argv[0]);
+            free(font);
+            free(char_buf);
+            exit(1);
       }
    
    // setup window	
@@ -503,11 +518,7 @@ int main(int argc, char* argv[])
    PangoLayout *layout;
    PangoFontDescription *font_description;
 
-   // font_description = pango_font_description_new();
    font_description = pango_font_description_from_string(font);
-   // pango_font_description_set_family(font_description, font);
-   // pango_font_description_set_weight(font_description, PANGO_WEIGHT_NORMAL);
-   // pango_font_description_set_absolute_size(font_description, font_size * PANGO_SCALE);
    
    layout = pango_cairo_create_layout(ctx);
    pango_layout_set_font_description (layout, font_description);
