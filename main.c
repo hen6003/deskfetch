@@ -3,9 +3,6 @@
 #include <X11/keysym.h>
 #include <X11/extensions/Xrandr.h>
 
-#include <GL/gl.h>
-#include <GL/glx.h>
-
 #include <cairo/cairo.h>
 #include <cairo/cairo-xlib.h>
 #include <pango/pangocairo.h>
@@ -143,7 +140,7 @@ int get_image_path(char* path)
    return 0;
 }
 
-char* get_distro(char* buf)
+void get_distro(char* buf)
 {
    FILE *fp;
    char *distro = buf;
@@ -166,11 +163,9 @@ char* get_distro(char* buf)
       
       fclose(fp);
    }
-
-   return distro;
 }
 
-char* get_kernel(char* buf)
+void get_kernel(char* buf)
 {
    FILE *fp;
    char *kernel = buf;
@@ -194,8 +189,6 @@ char* get_kernel(char* buf)
       
       fclose(fp);
    }
-
-   return kernel;
 }
 
 char* get_username(char* buf)
@@ -233,7 +226,7 @@ char* get_hostname(char* buf)
    return hostname;
 }
 
-char* get_device(char* buf)
+void get_device(char* buf)
 {
    FILE *fp;
    char *device = buf;
@@ -255,11 +248,9 @@ char* get_device(char* buf)
       
       fclose(fp);
    }
-
-   return device;
 }
 
-char* get_cpu(char* buf)
+void get_cpu(char* buf)
 {
    FILE *fp;
    char *cpu = buf;
@@ -284,8 +275,6 @@ char* get_cpu(char* buf)
       
       fclose(fp);
    }
-
-   return cpu;
 }
 
 char* get_mem(char* buf)
@@ -329,7 +318,7 @@ char* get_mem(char* buf)
       fclose(fp);
    }
 
-   return mem;
+   return buf;
 }
 
 char* get_uptime(char* char_buf)
@@ -380,10 +369,10 @@ char* get_uptime(char* char_buf)
       fclose(fp);
    }
 
-   return uptime;
+   return char_buf;
 }
 
-char* get_wm(cairo_surface_t* sfc, char* buf)
+void get_wm(cairo_surface_t* sfc, char* buf)
 {
    Display *dsp = cairo_xlib_surface_get_display(sfc);
    Window root = DefaultRootWindow(dsp);
@@ -395,7 +384,8 @@ char* get_wm(cairo_surface_t* sfc, char* buf)
    if(xerror)
    {
       fprintf(stderr, "ERROR: Couldn't allocate classhint\n");
-      return "Unknown";
+      strcpy(buf, "Unknown");
+      return;
    }
 
    int di;
@@ -430,11 +420,9 @@ char* get_wm(cairo_surface_t* sfc, char* buf)
 
    XFree(classhint->res_name);
    XFree(classhint->res_class);
-   
-   return buf;
 }
 
-char* get_screen_info(cairo_surface_t* sfc, char* buf)
+void get_screen_info(cairo_surface_t* sfc, char* buf)
 {
    Display *dsp = cairo_xlib_surface_get_display(sfc);
    Window root = DefaultRootWindow(dsp);
@@ -450,8 +438,6 @@ char* get_screen_info(cairo_surface_t* sfc, char* buf)
    int height = xrrs[current_size_id].height;
 
    sprintf(buf, "%d x %d @ %dHz", width, height, refresh_rate);
-
-   return buf;
 }
 
 int main(int argc, char* argv[])
