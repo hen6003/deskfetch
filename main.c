@@ -18,6 +18,7 @@ int win_y = 0;
 int win_w = 800;
 int win_h = 256;
 int needs_redraw = 0;
+int isUserWantsWindowToClose = 0;
 
 /*! Destroy cairo Xlib surface and close X connection.
  *  */
@@ -28,8 +29,6 @@ void close_x11_win(cairo_surface_t *sfc)
    cairo_surface_destroy(sfc);
    XCloseDisplay(dsp);
 }
-
-int isUserWantsWindowToClose = 0;
 
 int events_x11_win(cairo_surface_t *sfc)
 {
@@ -117,9 +116,9 @@ cairo_surface_t *setup_x11_win()
 
 int render_text_line;
 
-int pango_render_text_line(cairo_t* ctx, PangoLayout *layout, char* str, int spacing)
+int pango_render_text_line(cairo_t* ctx, PangoLayout *layout, int spacing, int offset, char* str)
 {
-   cairo_move_to(ctx, 280, render_text_line);
+   cairo_move_to(ctx, offset, render_text_line);
    pango_layout_set_text(layout, str, -1);
    pango_cairo_show_layout(ctx, layout);
 
@@ -399,8 +398,7 @@ void get_wm(cairo_surface_t* sfc, char* buf)
 	 if (XGetWindowProperty(dsp, root, prop, 0L, sizeof atom, False, req,
 	   &da, &di, &dl, &dl, &p) == Success && p) {
 	   atom = *(Atom *)p;
-	   // if (da == xatom[XembedInfo] && dl == 2)
-	     // atom = ((Atom *)p)[2];
+
 	   XFree(p);
 	 } 
 
@@ -527,8 +525,21 @@ int main(int argc, char* argv[])
    image_w = cairo_image_surface_get_width(image_sfc);
    image_h = cairo_image_surface_get_height(image_sfc);
    image = cairo_pattern_create_for_surface(image_sfc);
-   cairo_matrix_init_scale(&matrix, image_w/256.0, image_h/256.0);
+
+   if (image_h < image_w)
+      cairo_matrix_init_scale(&matrix, image_w/256.0, image_w/256.0);
+   else if (image_w < image_h)
+      cairo_matrix_init_scale(&matrix, image_h/256.0, image_h/256.0);
+   else
+      cairo_matrix_init_scale(&matrix, image_w/256.0, image_h/256.0);
+
    cairo_pattern_set_matrix(image, &matrix);
+  
+   printf("%d x %d\n", image_w, image_h);
+
+   int offset = 256.0 / ((double) image_h / (double) image_w) + font_size;
+
+   printf("%d\n", offset);
 
    free(image_path);
 
@@ -626,16 +637,16 @@ int main(int argc, char* argv[])
             cairo_stroke(ctx);
          }
 
-         pango_render_text_line(ctx, layout, name, font_size);
-         pango_render_text_line(ctx, layout, seperator, font_size);
-         pango_render_text_line(ctx, layout, distro, font_size);
-         pango_render_text_line(ctx, layout, kernel, font_size);
-         pango_render_text_line(ctx, layout, uptime, font_size);
-         pango_render_text_line(ctx, layout, device, font_size);
-         pango_render_text_line(ctx, layout, cpu, font_size);
-         pango_render_text_line(ctx, layout, mem, font_size);
-         pango_render_text_line(ctx, layout, wm, font_size);
-         pango_render_text_line(ctx, layout, screen_info, font_size);
+         pango_render_text_line(ctx, layout, font_size, offset, name);
+         pango_render_text_line(ctx, layout, font_size, offset, seperator);
+         pango_render_text_line(ctx, layout, font_size, offset, distro);
+         pango_render_text_line(ctx, layout, font_size, offset, kernel);
+         pango_render_text_line(ctx, layout, font_size, offset, uptime);
+         pango_render_text_line(ctx, layout, font_size, offset, device);
+         pango_render_text_line(ctx, layout, font_size, offset, cpu);
+         pango_render_text_line(ctx, layout, font_size, offset, mem);
+         pango_render_text_line(ctx, layout, font_size, offset, wm);
+         pango_render_text_line(ctx, layout, font_size, offset, screen_info);
 
          cairo_pop_group_to_source(ctx);
          cairo_paint(ctx);
