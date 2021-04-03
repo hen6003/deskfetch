@@ -446,6 +446,7 @@ int main(int argc, char* argv[])
    int font_size = 0;
    int borders = 0;
    int transparency = 0;
+   int offset;
    unsigned int interval = 200;
    char opt;
    char *font       = (char *) malloc(20);
@@ -526,20 +527,10 @@ int main(int argc, char* argv[])
    image_h = cairo_image_surface_get_height(image_sfc);
    image = cairo_pattern_create_for_surface(image_sfc);
 
-   if (image_h < image_w)
-      cairo_matrix_init_scale(&matrix, image_w/256.0, image_w/256.0);
-   else if (image_w < image_h)
-      cairo_matrix_init_scale(&matrix, image_h/256.0, image_h/256.0);
-   else
-      cairo_matrix_init_scale(&matrix, image_w/256.0, image_h/256.0);
+   cairo_matrix_init_scale(&matrix, image_h/256.0, image_h/256.0);
+   offset = 256 / ((double) image_h / (double) image_w) + font_size;
 
    cairo_pattern_set_matrix(image, &matrix);
-  
-   printf("%d x %d\n", image_w, image_h);
-
-   int offset = 256.0 / ((double) image_h / (double) image_w) + font_size;
-
-   printf("%d\n", offset);
 
    free(image_path);
 
