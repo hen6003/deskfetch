@@ -392,10 +392,10 @@ void get_wm(cairo_surface_t* sfc, char* buf)
    }
 
    int di;
-	 unsigned long dl;
-	 unsigned char *p = NULL;
-	 Atom da, atom = None;
-	 Atom req = XA_WINDOW;
+	unsigned long dl;
+	unsigned char *p = NULL;
+	Atom da, atom = None;
+	Atom req = XA_WINDOW;
 
    Atom prop = XInternAtom(dsp, "_NET_SUPPORTING_WM_CHECK", 0);
 
@@ -404,21 +404,36 @@ void get_wm(cairo_surface_t* sfc, char* buf)
 	   atom = *(Atom *)p;
 
 	   XFree(p);
-	 } 
+	} 
 
-   // printf("%d\n", atom);
    win = atom;
 
    s = XGetClassHint(dsp, win, classhint);
 
-   // buf = classhint->res_name;
-   strcpy(buf, classhint->res_class);
-
    if(!xerror && !s)
    {
       printf("ERROR: Couldn't get root window's class\n");
-      strcpy(buf, "Unknown");
+
+      XTextProperty text;
+      char **list = NULL;
+	   int n;
+
+      XGetTextProperty(dsp, win, &text, XInternAtom(dsp, "_NET_WM_NAME", 0));
+
+      if (XmbTextPropertyToTextList(dsp, &text, &list, &n) >= Success && n > 0 && *list) {
+			strncpy(buf, *list, strlen(buf));
+			XFreeStringList(list);
+		}
+
+      if(xerror && !s)
+         strcpy(buf, "Unknown");
+      else
+         buf[strlen(buf)] = 0x0;
+
+      XFree(text.value);
    }
+   else
+      strcpy(buf, classhint->res_class);
 
    XFree(classhint->res_name);
    XFree(classhint->res_class);
@@ -428,7 +443,7 @@ void get_screen_info(cairo_surface_t* sfc, char* buf)
 {
    Display *dsp = cairo_xlib_surface_get_display(sfc);
    Window root = DefaultRootWindow(dsp);
-	 int num_sizes;
+	int num_sizes;
    Rotation current_rotation;
 
    XRRScreenSize *xrrs = XRRSizes(dsp, 0, &num_sizes);
