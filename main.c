@@ -127,16 +127,20 @@ int pango_render_text_line(cairo_t* ctx, PangoLayout *layout, int spacing, int o
 
 int get_image_path(char* path)
 {
-   if (!access(path, R_OK))
-      return 0;
-   else if (path[0] != 0x0)
-      fprintf(stderr, "Couldn't find image: '%s'\n", path);
+   while (1)
+   {
+      if (!access(path, R_OK))
+         return 0;
+      else if (path[0] != 0x0)
+      {
+         fprintf(stderr, "Couldn't find image: '%s'\n", path);
+         exit(2);
+      }
 
-   char home[10];
-   strcpy(home, getenv("HOME"));
-   sprintf(path, "%s/.logo.png", home);
-
-   return 0;
+      char home[10];
+      strcpy(home, getenv("HOME"));
+      sprintf(path, "%s/.logo.png", home);
+   }
 }
 
 void get_distro(char* buf)
@@ -528,7 +532,7 @@ int main(int argc, char* argv[])
    image = cairo_pattern_create_for_surface(image_sfc);
 
    cairo_matrix_init_scale(&matrix, image_h/256.0, image_h/256.0);
-   offset = 256 / ((double) image_h / (double) image_w) + font_size;
+   offset = 256.0 / ((double) image_h / (double) image_w) + font_size;
 
    cairo_pattern_set_matrix(image, &matrix);
 

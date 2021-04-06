@@ -4,7 +4,7 @@ LIBS   = `pkg-config --libs pangocairo x11 xrandr`
 all: deskfetch
 
 deskfetch: main.o
-	gcc main.o -o $@ $(LIBS) $(CFLAGS)
+	cc main.o -o $@ $(LIBS) $(CFLAGS)
 
 clean:
 	rm -f *.o deskfetch
