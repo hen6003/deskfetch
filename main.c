@@ -13,6 +13,11 @@
 #include <string.h>
 #include <time.h>
 
+struct color
+{
+   double r,g,b,a;
+};
+
 int win_x = 0;
 int win_y = 0;
 int win_w = 800;
@@ -20,8 +25,7 @@ int win_h = 256;
 int needs_redraw = 0;
 int isUserWantsWindowToClose = 0;
 
-/*! Destroy cairo Xlib surface and close X connection.
- *  */
+// Destroy cairo Xlib surface and close X connection.
 void close_x11_win(cairo_surface_t *sfc)
 {
    Display *dsp = cairo_xlib_surface_get_display(sfc);
@@ -449,9 +453,15 @@ int main(int argc, char* argv[])
    cairo_t *ctx;
    int font_size = 0;
    int borders = 0;
-   int transparency = 0;
    int offset;
+   int font_color_hex = 0xffffff;
    unsigned int interval = 200;
+
+   struct color bg_color;
+   struct color font_color;
+   bg_color.r = bg_color.g = bg_color.b = bg_color.a = 0;
+   font_color.r = font_color.g = font_color.b = font_color.a = 1;
+
    char opt;
    char *font       = (char *) malloc(20);
    char *image_path = (char *) malloc(30);
@@ -461,7 +471,7 @@ int main(int argc, char* argv[])
    strcpy(font, "monospace 14");
 
    // parse args
-   while ((opt = getopt(argc, argv, "fbBtxyih")) != -1)
+   while ((opt = getopt(argc, argv, "fbBtxyihc")) != -1)
       switch (opt)
       {
          case 'f': 
@@ -471,7 +481,7 @@ int main(int argc, char* argv[])
             strcpy(image_path, argv[optind]);
             break;
          case 't': 
-            transparency = atoi(argv[optind]);
+            bg_color.a = atoi(argv[optind]) / 100.0;
             break;
          case 'x': 
             win_x = atoi(argv[optind]);
@@ -484,6 +494,23 @@ int main(int argc, char* argv[])
             break;
          case 'B':
             borders = 0;
+            break;
+         case 'c':
+            if (argv[optind])
+            {
+               if (strlen(argv[optind]) != 6)
+                  fprintf(stderr, "ERROR: invalid color\n");
+               else
+               {
+                  int hex = (int)strtol(argv[optind], NULL, 16);
+                  // convert hex to 3 doubles
+                  font_color.r = ((hex >> 16) & 0xFF) / 255.0;
+                  font_color.g = ((hex >> 8)  & 0xFF) / 255.0;
+                  font_color.b = (hex         & 0xFF) / 255.0;
+               }
+            }
+            else 
+               fprintf(stderr, "ERROR: invalid color\n");
             break;
          default:
             printf("%s [OPTION]...\n"
@@ -607,7 +634,7 @@ int main(int argc, char* argv[])
 
          /* Set surface to translucent color (r, g, b, a) without disturbing graphics state. */
          cairo_save(ctx);
-         cairo_set_source_rgba(ctx, 0, 0, 0, transparency / 256.0);
+         cairo_set_source_rgba(ctx, bg_color.r, bg_color.g, bg_color.b, bg_color.a);
          cairo_set_operator(ctx, CAIRO_OPERATOR_SOURCE);
          cairo_paint(ctx);
          cairo_restore(ctx);
@@ -619,7 +646,7 @@ int main(int argc, char* argv[])
          cairo_paint(ctx);
          cairo_stroke(ctx);
          
-         cairo_set_source_rgba(ctx, 1, 1, 1, 1);
+         cairo_set_source_rgba(ctx, font_color.r, font_color.g, font_color.b, 1);
 
          if (borders)
          {
