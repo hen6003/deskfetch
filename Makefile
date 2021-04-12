@@ -1,4 +1,4 @@
-CFLAGS = `pkg-config --cflags --libs pango`
+CFLAGS = `pkg-config --cflags --libs pangocairo`
 LIBS   = `pkg-config --libs pangocairo x11 xrandr`
 
 all: deskfetch

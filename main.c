@@ -209,28 +209,11 @@ char* get_username(char* buf)
 
 char* get_hostname(char* buf)
 {
-   FILE *fp;
-   char *hostname = buf;
-   char ch;
-
-   fp = fopen("/etc/hostname", "r");
+   gethostname(buf, strlen(buf));
    
-   if (fp == NULL)
-   {
-      fprintf(stderr, "ERROR: Couldn't get hostname\n");
-      strcpy(hostname, "Unknown");
-   }
-   else
-   {
-      strcpy(hostname, "");
-      
-      while ((ch = fgetc(fp)) != '\n')
-         sprintf(hostname, "%s%c", hostname, ch);
-      
-      fclose(fp);
-   }
+   buf[sizeof(buf)+1] = 0x0;
 
-   return hostname;
+   return buf;
 }
 
 void get_device(char* buf)
@@ -625,7 +608,7 @@ int main(int argc, char* argv[])
    mem = (char *) malloc(30);
    while(!isUserWantsWindowToClose)
    {
-      render_text_line = 10; // start of text rendering
+      render_text_line = 5; // start of text rendering
       interval++;
      
       // needs to be done constantly
