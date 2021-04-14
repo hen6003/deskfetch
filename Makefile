@@ -1,10 +1,11 @@
 CFLAGS = `pkg-config --cflags --libs pangocairo`
 LIBS   = `pkg-config --libs pangocairo x11 xrandr`
+OBJS   = main.o files.o
 
 all: deskfetch
 
-deskfetch: main.o
-	cc main.o -o $@ $(LIBS) $(CFLAGS)
+deskfetch: ${OBJS}
+	cc $(OBJS) -o $@ $(LIBS) $(CFLAGS)
 
 clean:
 	rm -f *.o deskfetch
