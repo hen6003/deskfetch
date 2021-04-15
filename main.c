@@ -162,10 +162,10 @@ void get_wm(cairo_surface_t* sfc, char* buf)
    }
 
    int di;
-	unsigned long dl;
-	unsigned char *p = NULL;
-	Atom da, atom = None;
-	Atom req = XA_WINDOW;
+   unsigned long dl;
+   unsigned char *p = NULL;
+   Atom da, atom = None;
+   Atom req = XA_WINDOW;
 
    Atom prop = XInternAtom(dsp, "_NET_SUPPORTING_WM_CHECK", 0);
 
@@ -174,7 +174,7 @@ void get_wm(cairo_surface_t* sfc, char* buf)
 	   atom = *(Atom *)p;
 
 	   XFree(p);
-	} 
+	 } 
 
    win = atom;
 
@@ -186,14 +186,14 @@ void get_wm(cairo_surface_t* sfc, char* buf)
 
       XTextProperty text;
       char **list = NULL;
-	   int n;
+	    int n;
 
       XGetTextProperty(dsp, win, &text, XInternAtom(dsp, "_NET_WM_NAME", 0));
 
       if (XmbTextPropertyToTextList(dsp, &text, &list, &n) >= Success && n > 0 && *list) {
-			strncpy(buf, *list, strlen(buf));
-			XFreeStringList(list);
-		}
+			   strncpy(buf, *list, strlen(buf));
+			   XFreeStringList(list);
+		  }
 
       if(xerror && !s)
          strcpy(buf, "Unknown");
@@ -213,7 +213,7 @@ void get_screen_info(cairo_surface_t* sfc, char* buf)
 {
    Display *dsp = cairo_xlib_surface_get_display(sfc);
    Window root = DefaultRootWindow(dsp);
-	int num_sizes;
+	 int num_sizes;
    Rotation current_rotation;
 
    XRRScreenSize *xrrs = XRRSizes(dsp, 0, &num_sizes);
